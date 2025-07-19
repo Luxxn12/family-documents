@@ -1,5 +1,13 @@
 import type { Metadata } from 'next'
-import './globals.css'
+import { Lato } from 'next/font/google' // Import Lato font
+import "./globals.css"
+
+// Configure Lato font
+const lato = Lato({
+  subsets: ["latin"],
+  weight: ["300", "400", "700", "900"], // Specify weights to load
+  variable: "--font-lato", // Optional: use as CSS variable if needed
+})
 
 export const metadata: Metadata = {
   title: 'Family Documents',
@@ -17,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={`${lato.className}`}>{children}</body>
     </html>
   )
 }

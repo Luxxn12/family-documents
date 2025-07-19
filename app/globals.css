@@ -48,3 +48,5 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Removed custom animation-delay classes as Framer Motion handles delays */

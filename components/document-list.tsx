@@ -1,22 +1,38 @@
 "use client";
 
-import type { Document, Folder } from "@/lib/types";
-import { format } from "date-fns";
-import {
-  Download,
-  EyeIcon,
-  File,
-  FileText,
-  FolderIcon,
-  ImageIcon,
-  MoreVertical,
-  Pencil,
-  Trash2,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  ImageIcon,
+  FileText,
+  File,
+  Download,
+  Trash2,
+  Pencil,
+  FolderIcon,
+  MoreVertical,
+  EyeIcon,
+} from "lucide-react";
+import { format } from "date-fns";
 import type { JSX } from "react/jsx-runtime";
+import type { Document, Folder } from "@/lib/types";
+import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,22 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { DocumentViewerModal } from "./document-viewer-modal";
 
 interface Props {
   documents: Document[];
@@ -65,9 +66,6 @@ export function DocumentList({
 }: Props) {
   const router = useRouter();
 
-  /* ------------------------------------------------------------------ */
-  /* UI state                                                            */
-  /* ------------------------------------------------------------------ */
   const [query, setQuery] = useState("");
 
   const [renameId, setRenameId] = useState<string | null>(null);
@@ -84,6 +82,9 @@ export function DocumentList({
   const [docToDelete, setDocToDelete] = useState<Document | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [openViewModal, setOpenViewModal] = useState(false); // State for view modal
+  const [documentToView, setDocumentToView] = useState<Document | null>(null); // State for document to view
+
   const iconFor = (type: string) => {
     if (type.startsWith("image/"))
       return <ImageIcon className="h-8 w-8 text-accent" />;
@@ -96,9 +97,6 @@ export function DocumentList({
     d.name.toLowerCase().includes(query.toLowerCase())
   );
 
-  /* ------------------------------------------------------------------ */
-  /* Helpers                                                             */
-  /* ------------------------------------------------------------------ */
   const handleRenameDocument = async () => {
     if (renameId && renameName.trim()) {
       setIsRenaming(true);
@@ -125,21 +123,27 @@ export function DocumentList({
 
   const handleDeleteDocument = async () => {
     if (docToDelete) {
+      console.log("handleDeleteDocument: Setting isDeleting to true");
       setIsDeleting(true);
       try {
         await onDeleteDocument(docToDelete.id);
         setDocToDelete(null);
         setOpenDeleteConfirm(false);
+        console.log(
+          "handleDeleteDocument: Deletion successful, isDeleting will be reset in finally"
+        );
       } catch (error) {
         console.error("handleDeleteDocument: Error during deletion:", error);
       } finally {
+        console.log("handleDeleteDocument: Setting isDeleting to false");
         setIsDeleting(false);
       }
     }
   };
 
-  const handleViewDocument = (docId: string) => {
-    router.push(`/view/${docId}`);
+  const handleViewDocument = (doc: Document) => {
+    setDocumentToView(doc);
+    setOpenViewModal(true);
   };
 
   const folderOptions = (parent: string | null, indent = ""): JSX.Element[] =>
@@ -153,9 +157,6 @@ export function DocumentList({
         ...folderOptions(f.id, indent + "  "),
       ]);
 
-  /* ------------------------------------------------------------------ */
-  /* Render                                                              */
-  /* ------------------------------------------------------------------ */
   return (
     <div className="flex-1 p-4 md:p-6 bg-background text-foreground">
       <Input
@@ -165,7 +166,7 @@ export function DocumentList({
           setQuery(e.target.value);
           onSearch(e.target.value);
         }}
-        className="mb-6 md:max-w-md w-full border-border bg-input text-foreground placeholder:text-muted-foreground shadow-sm focus:ring-ring"
+        className="mb-6 max-w-md border-border bg-input text-foreground placeholder:text-muted-foreground shadow-sm focus:ring-ring"
       />
 
       {filtered.length === 0 ? (
@@ -177,8 +178,8 @@ export function DocumentList({
           {filtered.map((doc) => (
             <div
               key={doc.id}
-              className="group relative flex flex-col items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
-              onClick={() => handleViewDocument(doc.id)}
+              className="group relative flex flex-col items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm hover:shadow-md transition-all duration-200"
+              // Removed onClick from here, now handled by dropdown menu
             >
               <div className="flex-shrink-0 mb-3">{iconFor(doc.fileType)}</div>
               <div className="flex-grow w-full text-center">
@@ -199,7 +200,7 @@ export function DocumentList({
                     variant="ghost"
                     size="icon"
                     className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground hover:bg-muted"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()} // Prevent card click when opening dropdown
                     disabled={isRenaming || isMoving || isDeleting}
                   >
                     <MoreVertical className="h-4 w-4" />
@@ -210,11 +211,22 @@ export function DocumentList({
                   className="w-40 bg-popover text-popover-foreground border-border"
                 >
                   {(doc.fileType === "application/pdf" ||
-                    doc.fileType.startsWith("image/")) && (
+                    doc.fileType.startsWith("image/") ||
+                    doc.fileType === "application/msword" ||
+                    doc.fileType ===
+                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+                    doc.fileType === "application/vnd.ms-excel" ||
+                    doc.fileType ===
+                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+                    doc.fileType === "application/vnd.ms-powerpoint" ||
+                    doc.fileType ===
+                      "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+                    doc.fileType === "text/plain" ||
+                    doc.fileType === "text/csv") && (
                     <DropdownMenuItem
                       onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewDocument(doc.id);
+                        e.stopPropagation(); // Prevent card click
+                        handleViewDocument(doc); // Open modal
                       }}
                       className="flex items-center hover:bg-muted focus:bg-muted"
                     >
@@ -362,7 +374,7 @@ export function DocumentList({
               Are you absolutely sure?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              This action cannot be undone. It will permanently delete the
+              This action cannot be undone. This will permanently delete the
               document "{docToDelete?.name}" from the server.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -383,6 +395,13 @@ export function DocumentList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Document Viewer Modal */}
+      <DocumentViewerModal
+        isOpen={openViewModal}
+        onOpenChange={setOpenViewModal}
+        document={documentToView}
+      />
     </div>
   );
 }
