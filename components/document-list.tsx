@@ -1,16 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { ImageIcon, FileText, File, Download, Trash2, Pencil, FolderIcon, MoreVertical } from "lucide-react"
-import { format } from "date-fns"
-import type { JSX } from "react/jsx-runtime"
 import type { Document, Folder } from "@/lib/types"
+import { format } from "date-fns"
+import { Download, File, FileText, FolderIcon, ImageIcon, MoreVertical, Pencil, Trash2 } from "lucide-react"
+import { useState } from "react"
+import type { JSX } from "react/jsx-runtime"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +16,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface Props {
   documents: Document[]
@@ -97,17 +97,14 @@ export function DocumentList({
 
   const handleDeleteDocument = async () => {
     if (docToDelete) {
-      console.log("handleDeleteDocument: Setting isDeleting to true")
       setIsDeleting(true)
       try {
         await onDeleteDocument(docToDelete.id)
         setDocToDelete(null)
         setOpenDeleteConfirm(false)
-        console.log("handleDeleteDocument: Deletion successful, isDeleting will be reset in finally")
       } catch (error) {
         console.error("handleDeleteDocument: Error during deletion:", error)
       } finally {
-        console.log("handleDeleteDocument: Setting isDeleting to false")
         setIsDeleting(false)
       }
     }
@@ -136,7 +133,7 @@ export function DocumentList({
           setQuery(e.target.value)
           onSearch(e.target.value)
         }}
-        className="mb-6 max-w-md border-border bg-input text-foreground placeholder:text-muted-foreground shadow-sm focus:ring-ring"
+        className="mb-6 md:max-w-md w-full border-border bg-input text-foreground placeholder:text-muted-foreground shadow-sm focus:ring-ring"
       />
 
       {filtered.length === 0 ? (

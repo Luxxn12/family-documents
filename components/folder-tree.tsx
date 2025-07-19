@@ -1,12 +1,5 @@
 "use client"
 
-import { useState } from "react"
-import { FolderIcon, FileIcon, Plus, MoreVertical, Trash2, Pencil, XIcon } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +10,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import type { Folder } from "@/lib/types"
+import { FileIcon, FolderIcon, MoreVertical, Pencil, Plus, Trash2, XIcon } from "lucide-react"
+import { useState } from "react"
 
 interface Props {
   folders: Folder[]
@@ -86,17 +86,14 @@ export function FolderTree({
 
   const handleDeleteFolder = async () => {
     if (folderToDelete) {
-      console.log("handleDeleteFolder: Setting isDeleting to true")
       setIsDeleting(true)
       try {
         await onDeleteFolder(folderToDelete.id)
         setFolderToDelete(null)
         setOpenDeleteConfirm(false)
-        console.log("handleDeleteFolder: Deletion successful, isDeleting will be reset in finally")
       } catch (error) {
         console.error("handleDeleteFolder: Error during deletion:", error)
       } finally {
-        console.log("handleDeleteFolder: Setting isDeleting to false")
         setIsDeleting(false)
       }
     }

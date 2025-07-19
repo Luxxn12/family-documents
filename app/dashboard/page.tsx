@@ -1,16 +1,16 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
 import { Upload } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
 
-import { getUserId } from "@/lib/auth"
-import { Header } from "@/components/header"
-import { FolderTree } from "@/components/folder-tree"
 import { DocumentList } from "@/components/document-list"
-import { UploadDialog } from "@/components/upload-dialog"
+import { FolderTree } from "@/components/folder-tree"
+import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-import type { Folder, Document } from "@/lib/types"
+import { UploadDialog } from "@/components/upload-dialog"
+import { getUserId } from "@/lib/auth"
+import type { Document, Folder } from "@/lib/types"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -67,10 +67,8 @@ export default function DashboardPage() {
         console.warn("refreshAll called without userId.")
         return
       }
-      console.log("Refreshing all data...")
       try {
         await Promise.all([fetchFolders(uid), fetchDocs(uid, folder)])
-        console.log("Data refresh complete.")
       } catch (error) {
         console.error("Error during data refresh (Promise.all):", error)
         // Optionally, show a toast or error message to the user
@@ -142,17 +140,14 @@ export default function DashboardPage() {
 
   const deleteFolder = async (id: string) => {
     if (!userId) return
-    console.log(`Attempting to delete folder ${id}...`)
     try {
       const res = await fetch(`/api/folders/${id}`, {
         method: "DELETE",
         headers: { "X-User-Id": userId },
       })
       if (res.ok) {
-        console.log(`Folder ${id} deleted successfully.`)
         if (currentFolderId === id) {
           setCurrentFolderId(null) // If current folder is deleted, go to root
-          console.log("Current folder deleted, setting currentFolderId to null.")
         }
         await refreshAll(userId, currentFolderId) // Always refresh after successful deletion
       } else {
@@ -171,14 +166,12 @@ export default function DashboardPage() {
   /* ------------------------------------------------------------------ */
   const deleteDoc = async (id: string) => {
     if (!userId) return
-    console.log(`Attempting to delete document ${id}...`)
     try {
       const res = await fetch(`/api/documents/${id}`, {
         method: "DELETE",
         headers: { "X-User-Id": userId },
       })
       if (res.ok) {
-        console.log(`Document ${id} deleted successfully.`)
         await refreshAll(userId, currentFolderId)
       } else {
         const errorText = await res.text()

@@ -1,9 +1,10 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { clearUserId } from "@/lib/auth"
-import { HomeIcon, LogOutIcon, MenuIcon } from "lucide-react"
+import { LogOutIcon, MenuIcon } from "lucide-react"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 interface HeaderProps {
   onToggleSidebar: () => void
@@ -35,7 +36,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           onClick={() => router.push("/dashboard")}
           className="flex items-center gap-2 text-lg font-semibold text-foreground hover:bg-transparent hover:text-primary"
         >
-          <HomeIcon className="h-6 w-6 text-accent" /> {/* Using accent for icon */}
+          <Image src="/logo-doc.png" alt="Family Docs Logo" width={32} height={32} />
           <span>Family Docs</span>
         </Button>
       </div>
