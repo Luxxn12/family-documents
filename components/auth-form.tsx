@@ -1,16 +1,17 @@
 "use client"
 
-import type React from "react"
+import Image from "next/image"; // Import Image component from Next.js
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { setUserId } from "@/lib/auth"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { setUserId } from "@/lib/auth";
 
 interface AuthFormProps {
   type: "login" | "register"
@@ -44,7 +45,6 @@ export function AuthForm({ type }: AuthFormProps) {
         setUserId(data.userId)
         router.push("/dashboard")
       } else {
-        // Read the error body exactly once based on its Content-Type
         let message = "An unexpected error occurred."
         const ct = res.headers.get("content-type") ?? ""
 
@@ -53,7 +53,6 @@ export function AuthForm({ type }: AuthFormProps) {
             const err = await res.json()
             message = err.message ?? message
           } else {
-            // Fallback for plain-text or HTML error bodies
             message = await res.text()
           }
         } catch (parseErr) {
@@ -72,6 +71,16 @@ export function AuthForm({ type }: AuthFormProps) {
 
   return (
     <Card className="w-full max-w-md mx-auto bg-card text-card-foreground border-border shadow-lg">
+      <div className="flex justify-center pt-8 pb-4">
+        {" "}
+
+        <Image
+          src="/logo-doc.png"
+          alt="Family Document Manager Logo"
+          width={80}
+          height={80}
+        />
+      </div>
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold text-white">{type === "login" ? "Login" : "Register"}</CardTitle>
         <CardDescription className="text-muted-foreground">
@@ -85,7 +94,7 @@ export function AuthForm({ type }: AuthFormProps) {
             <Input
               id="email"
               type="email"
-              placeholder="m@example.com"
+              placeholder="Enter your email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -99,6 +108,7 @@ export function AuthForm({ type }: AuthFormProps) {
               id="password"
               type="password"
               required
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
@@ -123,6 +133,33 @@ export function AuthForm({ type }: AuthFormProps) {
             )}
           </Button>
         </form>
+        <div className="mt-6 text-center text-sm text-muted-foreground">
+          {type === "login" ? (
+            <>
+              Don't have an account?{" "}
+              <Button
+                variant="link"
+                onClick={() => router.push("/register")}
+                className="p-0 h-auto text-accent hover:text-accent/80 font-bold"
+                disabled={isLoading}
+              >
+                Register
+              </Button>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <Button
+                variant="link"
+                onClick={() => router.push("/login")}
+                className="p-0 h-auto text-accent hover:text-accent/80 font-bold"
+                disabled={isLoading}
+              >
+                Login
+              </Button>
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   )
