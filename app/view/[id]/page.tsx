@@ -88,7 +88,7 @@ export default function DocumentViewPage() {
     )
   }
 
-  const fileUrl = `/api/files/${document.id}` // Gunakan rute API yang menyajikan konten file
+  const fileUrl = `/api/files/${document.id}`
 
   const isPdf = document.fileType === "application/pdf"
   const isImage = document.fileType.startsWith("image/")
@@ -100,7 +100,7 @@ export default function DocumentViewPage() {
         src={fileUrl}
         title={document.name}
         className="w-full h-full border-none"
-        style={{ minHeight: "calc(100vh - 64px)" }} // Sesuaikan tinggi berdasarkan header
+        style={{ minHeight: "calc(100vh - 64px)" }} 
       >
         <p className="p-4 text-center text-muted-foreground">
           Browser Anda tidak mendukung iframe. Anda dapat{" "}
@@ -117,12 +117,11 @@ export default function DocumentViewPage() {
         <img
           src={fileUrl || "/placeholder.svg"}
           alt={document.name}
-          className="max-w-full max-h-[calc(100vh-100px)] object-contain" // Batasi ukuran gambar
+          className="max-w-full max-h-[calc(100vh-100px)] object-contain" 
         />
       </div>
     )
   } else {
-    // Untuk jenis lain seperti dokumen kantor, teks, CSV, dll.
     previewContent = (
       <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
         <FileWarningIcon className="h-20 w-20 text-muted-foreground mb-4" />

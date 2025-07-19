@@ -1,22 +1,23 @@
 "use client"
 
-import { Upload, Users } from "lucide-react"; // Import Users icon
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { Upload, Users } from "lucide-react" 
 
-import { DocumentList } from "@/components/document-list"
-import { FolderTree } from "@/components/folder-tree"
-import { Header } from "@/components/header"
-import { Button } from "@/components/ui/button"
-import { UploadDialog } from "@/components/upload-dialog"
-import { UserManagement } from "@/components/user-management"; // Import UserManagement component
 import { getUserId } from "@/lib/auth"
-import type { Document, Folder, Role } from "@/lib/types"; // Import User and Role types
+import { Header } from "@/components/header"
+import { FolderTree } from "@/components/folder-tree"
+import { DocumentList } from "@/components/document-list"
+import { UploadDialog } from "@/components/upload-dialog"
+import { Button } from "@/components/ui/button"
+import { UserManagement } from "@/components/user-management" 
+import type { Folder, Document, Role } from "@/lib/types" 
 
 export default function DashboardPage() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
-  const [currentUserRole, setCurrentUserRole] = useState<Role | null>(null) // New state for current user's role
+  const [currentUserRole, setCurrentUserRole] = useState<Role | null>(null) 
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
 
   const [folders, setFolders] = useState<Folder[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
@@ -24,7 +25,7 @@ export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const [openUpload, setOpenUpload] = useState(false)
-  const [activeTab, setActiveTab] = useState<"documents" | "users">("documents") // New state for active tab
+  const [activeTab, setActiveTab] = useState<"documents" | "users">("documents")
 
   /* ------------------------------------------------------------------ */
   /* Data fetching helpers                                               */
@@ -64,21 +65,24 @@ export default function DashboardPage() {
     }
   }, [])
 
-  const fetchCurrentUserRole = useCallback(async (uid: string) => {
+  const fetchCurrentUserDetails = useCallback(async (uid: string) => {
     try {
       const res = await fetch(`/api/users/${uid}`, {
-        headers: { "X-User-Id": uid }, // Send self ID to get own details
+        headers: { "X-User-Id": uid },
       })
       if (res.ok) {
         const data = await res.json()
         setCurrentUserRole(data.user.role)
+        setCurrentUserEmail(data.user.email)
       } else {
-        console.error("Failed to fetch current user role:", res.status, await res.text())
+        console.error("Failed to fetch current user details:", res.status, await res.text())
         setCurrentUserRole(null)
+        setCurrentUserEmail(null)
       }
     } catch (error) {
-      console.error("Network error fetching current user role:", error)
+      console.error("Network error fetching current user details:", error)
       setCurrentUserRole(null)
+      setCurrentUserEmail(null)
     }
   }, [])
 
@@ -90,18 +94,16 @@ export default function DashboardPage() {
       }
       console.log("Refreshing all data...")
       try {
-        await Promise.all([fetchFolders(uid), fetchDocs(uid, folder), fetchCurrentUserRole(uid)])
+        await Promise.all([fetchFolders(uid), fetchDocs(uid, folder), fetchCurrentUserDetails(uid)])
         console.log("Data refresh complete.")
       } catch (error) {
         console.error("Error during data refresh (Promise.all):", error)
       }
     },
-    [fetchFolders, fetchDocs, fetchCurrentUserRole],
+    [fetchFolders, fetchDocs, fetchCurrentUserDetails],
   )
 
-  /* ------------------------------------------------------------------ */
-  /* Initial load & folder change                                        */
-  /* ------------------------------------------------------------------ */
+ 
   useEffect(() => {
     const uid = getUserId()
     if (!uid) {
@@ -113,9 +115,6 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, currentFolderId])
 
-  /* ------------------------------------------------------------------ */
-  /* Folder handlers                                                     */
-  /* ------------------------------------------------------------------ */
   const createFolder = async (name: string, parent: string | null) => {
     if (!userId) return
     try {
@@ -182,9 +181,6 @@ export default function DashboardPage() {
     }
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Document handlers                                                   */
-  /* ------------------------------------------------------------------ */
   const deleteDoc = async (id: string) => {
     if (!userId) return
     console.log(`Attempting to delete document ${id}...`)
@@ -247,12 +243,13 @@ export default function DashboardPage() {
     }
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Render                                                              */
-  /* ------------------------------------------------------------------ */
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Header
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        userEmail={currentUserEmail}
+        userRole={currentUserRole}
+      />
 
       <main className="flex flex-1 overflow-hidden">
         {/* Mobile sidebar backdrop */}
@@ -266,7 +263,7 @@ export default function DashboardPage() {
           onSelectFolder={(id) => {
             setCurrentFolderId(id)
             setIsSidebarOpen(false)
-            setActiveTab("documents") // Switch to documents tab when selecting folder
+            setActiveTab("documents")
           }}
           onCreateFolder={createFolder}
           onRenameFolder={renameFolder}
