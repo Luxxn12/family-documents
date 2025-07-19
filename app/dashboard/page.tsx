@@ -1,6 +1,6 @@
 "use client"
 
-import { Upload } from "lucide-react"
+import { Upload, Users } from "lucide-react"; // Import Users icon
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
@@ -9,12 +9,14 @@ import { FolderTree } from "@/components/folder-tree"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { UploadDialog } from "@/components/upload-dialog"
+import { UserManagement } from "@/components/user-management"; // Import UserManagement component
 import { getUserId } from "@/lib/auth"
-import type { Document, Folder } from "@/lib/types"
+import type { Document, Folder, Role } from "@/lib/types"; // Import User and Role types
 
 export default function DashboardPage() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<Role | null>(null) // New state for current user's role
 
   const [folders, setFolders] = useState<Folder[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
@@ -22,6 +24,7 @@ export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const [openUpload, setOpenUpload] = useState(false)
+  const [activeTab, setActiveTab] = useState<"documents" | "users">("documents") // New state for active tab
 
   /* ------------------------------------------------------------------ */
   /* Data fetching helpers                                               */
@@ -34,11 +37,11 @@ export default function DashboardPage() {
         setFolders(data.folders as Folder[])
       } else {
         console.error("Failed to fetch folders:", res.status, await res.text())
-        setFolders([]) // Clear folders on error to prevent stale data
+        setFolders([])
       }
     } catch (error) {
       console.error("Network error fetching folders:", error)
-      setFolders([]) // Clear folders on network error
+      setFolders([])
     }
   }, [])
 
@@ -53,11 +56,29 @@ export default function DashboardPage() {
         setDocuments(data.documents as Document[])
       } else {
         console.error("Failed to fetch documents:", res.status, await res.text())
-        setDocuments([]) // Clear documents on error
+        setDocuments([])
       }
     } catch (error) {
       console.error("Network error fetching documents:", error)
-      setDocuments([]) // Clear documents on network error
+      setDocuments([])
+    }
+  }, [])
+
+  const fetchCurrentUserRole = useCallback(async (uid: string) => {
+    try {
+      const res = await fetch(`/api/users/${uid}`, {
+        headers: { "X-User-Id": uid }, // Send self ID to get own details
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setCurrentUserRole(data.user.role)
+      } else {
+        console.error("Failed to fetch current user role:", res.status, await res.text())
+        setCurrentUserRole(null)
+      }
+    } catch (error) {
+      console.error("Network error fetching current user role:", error)
+      setCurrentUserRole(null)
     }
   }, [])
 
@@ -67,14 +88,15 @@ export default function DashboardPage() {
         console.warn("refreshAll called without userId.")
         return
       }
+      console.log("Refreshing all data...")
       try {
-        await Promise.all([fetchFolders(uid), fetchDocs(uid, folder)])
+        await Promise.all([fetchFolders(uid), fetchDocs(uid, folder), fetchCurrentUserRole(uid)])
+        console.log("Data refresh complete.")
       } catch (error) {
         console.error("Error during data refresh (Promise.all):", error)
-        // Optionally, show a toast or error message to the user
       }
     },
-    [fetchFolders, fetchDocs],
+    [fetchFolders, fetchDocs, fetchCurrentUserRole],
   )
 
   /* ------------------------------------------------------------------ */
@@ -109,11 +131,9 @@ export default function DashboardPage() {
         await refreshAll(userId, currentFolderId)
       } else {
         console.error("Failed to create folder:", res.status, await res.text())
-        // Consider showing a user-friendly error message here
       }
     } catch (error) {
       console.error("Network error creating folder:", error)
-      // Consider showing a user-friendly error message here
     }
   }
 
@@ -140,24 +160,25 @@ export default function DashboardPage() {
 
   const deleteFolder = async (id: string) => {
     if (!userId) return
+    console.log(`Attempting to delete folder ${id}...`)
     try {
       const res = await fetch(`/api/folders/${id}`, {
         method: "DELETE",
         headers: { "X-User-Id": userId },
       })
       if (res.ok) {
+        console.log(`Folder ${id} deleted successfully.`)
         if (currentFolderId === id) {
-          setCurrentFolderId(null) // If current folder is deleted, go to root
+          setCurrentFolderId(null)
+          console.log("Current folder deleted, setting currentFolderId to null.")
         }
-        await refreshAll(userId, currentFolderId) // Always refresh after successful deletion
+        await refreshAll(userId, currentFolderId)
       } else {
         const errorText = await res.text()
         console.error(`Failed to delete folder ${id}:`, res.status, errorText)
-        // Consider showing a user-friendly error message here
       }
     } catch (error) {
       console.error(`Network error deleting folder ${id}:`, error)
-      // Consider showing a user-friendly error message here
     }
   }
 
@@ -166,21 +187,21 @@ export default function DashboardPage() {
   /* ------------------------------------------------------------------ */
   const deleteDoc = async (id: string) => {
     if (!userId) return
+    console.log(`Attempting to delete document ${id}...`)
     try {
       const res = await fetch(`/api/documents/${id}`, {
         method: "DELETE",
         headers: { "X-User-Id": userId },
       })
       if (res.ok) {
+        console.log(`Document ${id} deleted successfully.`)
         await refreshAll(userId, currentFolderId)
       } else {
         const errorText = await res.text()
         console.error(`Failed to delete document ${id}:`, res.status, errorText)
-        // Consider showing a user-friendly error message here
       }
     } catch (error) {
       console.error(`Network error deleting document ${id}:`, error)
-      // Consider showing a user-friendly error message here
     }
   }
 
@@ -245,6 +266,7 @@ export default function DashboardPage() {
           onSelectFolder={(id) => {
             setCurrentFolderId(id)
             setIsSidebarOpen(false)
+            setActiveTab("documents") // Switch to documents tab when selecting folder
           }}
           onCreateFolder={createFolder}
           onRenameFolder={renameFolder}
@@ -255,27 +277,72 @@ export default function DashboardPage() {
 
         <div className="flex flex-1 flex-col overflow-auto">
           <div className="flex items-center justify-between border-b border-border p-4 bg-background sticky top-0 z-10 shadow-sm">
-            <h1 className="text-2xl font-bold text-foreground">
-              {currentFolderId ? (folders.find((f) => f.id === currentFolderId)?.name ?? "Unknown") : "All Files"}
-            </h1>
-            <Button
-              onClick={() => setOpenUpload(true)}
-              className="bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg transition-shadow"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload
-            </Button>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-foreground">
+                {activeTab === "documents"
+                  ? currentFolderId
+                    ? (folders.find((f) => f.id === currentFolderId)?.name ?? "Unknown")
+                    : "All Files"
+                  : "User Management"}
+              </h1>
+              {currentUserRole === "admin" && (
+                <div className="flex gap-2">
+                  <Button
+                    variant={activeTab === "documents" ? "default" : "ghost"}
+                    onClick={() => setActiveTab("documents")}
+                    className={
+                      activeTab === "documents"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                    }
+                  >
+                    Documents
+                  </Button>
+                  <Button
+                    variant={activeTab === "users" ? "default" : "ghost"}
+                    onClick={() => setActiveTab("users")}
+                    className={
+                      activeTab === "users"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                    }
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Users
+                  </Button>
+                </div>
+              )}
+            </div>
+            {activeTab === "documents" && (
+              <Button
+                onClick={() => setOpenUpload(true)}
+                className="bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg transition-shadow"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Upload
+              </Button>
+            )}
           </div>
 
-          <DocumentList
-            documents={documents}
-            folders={folders}
-            currentFolderId={currentFolderId}
-            onDeleteDocument={deleteDoc}
-            onRenameDocument={renameDoc}
-            onMoveDocument={moveDoc}
-            onSearch={() => {}}
-          />
+          {activeTab === "documents" && (
+            <DocumentList
+              documents={documents}
+              folders={folders}
+              currentFolderId={currentFolderId}
+              onDeleteDocument={deleteDoc}
+              onRenameDocument={renameDoc}
+              onMoveDocument={moveDoc}
+              onSearch={() => {}}
+            />
+          )}
+
+          {activeTab === "users" && userId && currentUserRole && (
+            <UserManagement
+              userId={userId}
+              currentUserRole={currentUserRole}
+              onUserRoleChange={() => refreshAll(userId, currentFolderId)} // Refresh all data after role change
+            />
+          )}
         </div>
       </main>
 

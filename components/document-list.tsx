@@ -1,11 +1,17 @@
 "use client"
 
-import type { Document, Folder } from "@/lib/types"
-import { format } from "date-fns"
-import { Download, File, FileText, FolderIcon, ImageIcon, MoreVertical, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { ImageIcon, FileText, File, Download, Trash2, Pencil, FolderIcon, MoreVertical, EyeIcon } from "lucide-react"
+import { format } from "date-fns"
 import type { JSX } from "react/jsx-runtime"
+import type { Document, Folder } from "@/lib/types"
+import { useRouter } from "next/navigation"
 
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,11 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
 interface Props {
   documents: Document[]
@@ -41,6 +42,8 @@ export function DocumentList({
   onMoveDocument,
   onSearch,
 }: Props) {
+  const router = useRouter()
+
   /* ------------------------------------------------------------------ */
   /* UI state                                                            */
   /* ------------------------------------------------------------------ */
@@ -97,17 +100,24 @@ export function DocumentList({
 
   const handleDeleteDocument = async () => {
     if (docToDelete) {
+      console.log("handleDeleteDocument: Setting isDeleting to true")
       setIsDeleting(true)
       try {
         await onDeleteDocument(docToDelete.id)
         setDocToDelete(null)
         setOpenDeleteConfirm(false)
+        console.log("handleDeleteDocument: Deletion successful, isDeleting will be reset in finally")
       } catch (error) {
         console.error("handleDeleteDocument: Error during deletion:", error)
       } finally {
+        console.log("handleDeleteDocument: Setting isDeleting to false")
         setIsDeleting(false)
       }
     }
+  }
+
+  const handleViewDocument = (docId: string) => {
+    router.push(`/view/${docId}`)
   }
 
   const folderOptions = (parent: string | null, indent = ""): JSX.Element[] =>
@@ -133,17 +143,18 @@ export function DocumentList({
           setQuery(e.target.value)
           onSearch(e.target.value)
         }}
-        className="mb-6 md:max-w-md w-full border-border bg-input text-foreground placeholder:text-muted-foreground shadow-sm focus:ring-ring"
+        className="mb-6 max-w-md border-border bg-input text-foreground placeholder:text-muted-foreground shadow-sm focus:ring-ring"
       />
 
       {filtered.length === 0 ? (
-        <p className="text-center text-muted-foreground py-10">No documents found in this folder.</p>
+        <p className="text-center text-muted-foreground py-10">Tidak ada dokumen ditemukan di folder ini.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.map((doc) => (
             <div
               key={doc.id}
               className="group relative flex flex-col items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+              onClick={() => handleViewDocument(doc.id)} // Jadikan seluruh kartu dapat diklik
             >
               <div className="flex-shrink-0 mb-3">{iconFor(doc.fileType)}</div>
               <div className="flex-grow w-full text-center">
@@ -161,23 +172,36 @@ export function DocumentList({
                     variant="ghost"
                     size="icon"
                     className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground hover:bg-muted"
+                    onClick={(e) => e.stopPropagation()} // Mencegah klik kartu saat membuka dropdown
                     disabled={isRenaming || isMoving || isDeleting}
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40 bg-popover text-popover-foreground border-border">
+                  {(doc.fileType === "application/pdf" || doc.fileType.startsWith("image/")) && ( // Tampilkan view untuk PDF dan gambar
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation() // Mencegah klik kartu
+                        handleViewDocument(doc.id)
+                      }}
+                      className="flex items-center hover:bg-muted focus:bg-muted"
+                    >
+                      <EyeIcon className="mr-2 h-4 w-4" /> Lihat
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <a
                       href={`/api/files/${doc.id}`}
                       download={doc.originalFileName}
                       className="flex items-center hover:bg-muted focus:bg-muted"
                     >
-                      <Download className="mr-2 h-4 w-4" /> Download
+                      <Download className="mr-2 h-4 w-4" /> Unduh
                     </a>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation() // Mencegah klik kartu
                       setRenameId(doc.id)
                       setRenameName(doc.name)
                       setOpenRename(true)
@@ -185,10 +209,11 @@ export function DocumentList({
                     disabled={isRenaming || isMoving || isDeleting}
                     className="hover:bg-muted focus:bg-muted"
                   >
-                    <Pencil className="mr-2 h-4 w-4" /> Rename
+                    <Pencil className="mr-2 h-4 w-4" /> Ganti Nama
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation() // Mencegah klik kartu
                       setMoveId(doc.id)
                       setMoveFolder(doc.folderId)
                       setOpenMove(true)
@@ -196,17 +221,18 @@ export function DocumentList({
                     disabled={isRenaming || isMoving || isDeleting}
                     className="hover:bg-muted focus:bg-muted"
                   >
-                    <FolderIcon className="mr-2 h-4 w-4" /> Move
+                    <FolderIcon className="mr-2 h-4 w-4" /> Pindahkan
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive focus:bg-destructive/20"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation() // Mencegah klik kartu
                       setDocToDelete(doc)
                       setOpenDeleteConfirm(true)
                     }}
                     disabled={isRenaming || isMoving || isDeleting}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    <Trash2 className="mr-2 h-4 w-4" /> Hapus
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -219,17 +245,17 @@ export function DocumentList({
       <Dialog open={openRename} onOpenChange={setOpenRename}>
         <DialogContent className="bg-card text-card-foreground border-border">
           <DialogHeader>
-            <DialogTitle>Rename Document</DialogTitle>
+            <DialogTitle>Ganti Nama Dokumen</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <Label htmlFor="rename-doc" className="text-foreground">
-              Name
+              Nama
             </Label>
             <Input
               id="rename-doc"
               value={renameName}
               onChange={(e) => setRenameName(e.target.value)}
-              placeholder="Document name"
+              placeholder="Nama dokumen"
               disabled={isRenaming}
               className="bg-input text-foreground border-border focus:ring-ring"
             />
@@ -241,14 +267,14 @@ export function DocumentList({
               disabled={isRenaming}
               className="border-border text-foreground hover:bg-muted"
             >
-              Cancel
+              Batal
             </Button>
             <Button
               onClick={handleRenameDocument}
               disabled={isRenaming || !renameName.trim()}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {isRenaming ? "Renaming..." : "Rename"}
+              {isRenaming ? "Mengganti Nama..." : "Ganti Nama"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -258,11 +284,11 @@ export function DocumentList({
       <Dialog open={openMove} onOpenChange={setOpenMove}>
         <DialogContent className="bg-card text-card-foreground border-border">
           <DialogHeader>
-            <DialogTitle>Move Document</DialogTitle>
+            <DialogTitle>Pindahkan Dokumen</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <Label htmlFor="move-doc" className="text-foreground">
-              Destination folder
+              Folder Tujuan
             </Label>
             <select
               id="move-doc"
@@ -271,7 +297,7 @@ export function DocumentList({
               onChange={(e) => setMoveFolder(e.target.value === "" ? null : e.target.value)}
               disabled={isMoving}
             >
-              <option value="">Root (no folder)</option>
+              <option value="">Root (tidak ada folder)</option>
               {folderOptions(null)}
             </select>
           </div>
@@ -282,14 +308,14 @@ export function DocumentList({
               disabled={isMoving}
               className="border-border text-foreground hover:bg-muted"
             >
-              Cancel
+              Batal
             </Button>
             <Button
               onClick={handleMoveDocument}
               disabled={isMoving}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {isMoving ? "Moving..." : "Move"}
+              {isMoving ? "Memindahkan..." : "Pindahkan"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -299,22 +325,22 @@ export function DocumentList({
       <AlertDialog open={openDeleteConfirm} onOpenChange={setOpenDeleteConfirm}>
         <AlertDialogContent className="bg-card text-card-foreground border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle className="text-foreground">Apakah Anda benar-benar yakin?</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              This action cannot be undone. This will permanently delete the document "{docToDelete?.name}" from the
+              Tindakan ini tidak dapat dibatalkan. Ini akan menghapus dokumen "{docToDelete?.name}" secara permanen dari
               server.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting} className="border-border text-foreground hover:bg-muted">
-              Cancel
+              Batal
             </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDeleteDocument}
               disabled={isDeleting}
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Menghapus..." : "Hapus"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

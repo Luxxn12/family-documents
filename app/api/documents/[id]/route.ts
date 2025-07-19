@@ -1,9 +1,38 @@
-import { NextResponse } from "next/server"
-import { sql, pool } from "@/lib/db"
+import { pool, sql } from "@/lib/db"
 import type { Document } from "@/lib/types"
 import { del } from "@vercel/blob"
+import { NextResponse } from "next/server"
 
 const getUserId = (h: Headers) => h.get("X-User-Id") ?? ""
+
+/* -------------------------------------------------------------------------- */
+/* GET – return a single document's metadata                                  */
+/* -------------------------------------------------------------------------- */
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const userId = getUserId(req.headers)
+  if (!userId) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+  }
+
+  const { id } = params
+
+  try {
+    const [doc] = await sql<Document[]>`
+      SELECT id, name, original_file_name AS "originalFileName", file_type AS "fileType", url, folder_id AS "folderId", owner_id AS "ownerId", uploaded_at AS "uploadedAt"
+      FROM documents
+      WHERE id = ${id};
+    `
+
+    if (!doc || doc.ownerId !== userId) {
+      return NextResponse.json({ message: "Document not found or unauthorized" }, { status: 404 })
+    }
+
+    return NextResponse.json({ document: doc }, { status: 200 })
+  } catch (error: any) {
+    console.error("Failed to fetch document metadata:", error)
+    return NextResponse.json({ message: "Failed to fetch document metadata", error: error.message }, { status: 500 })
+  }
+}
 
 /* -------------------------------------------------------------------------- */
 /* PUT – rename or move document                                               */
