@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 11%; /* A very dark blue/slate */
+    --foreground: 210 20% 98%; /* Light text on dark background */
+
+    --card: 222 47% 15%; /* Slightly lighter dark blue for cards */
+    --card-foreground: 210 20% 98%;
+
+    --popover: 222 47% 15%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 218 50% 20%; /* Main dark blue for buttons/accents */
+    --primary-foreground: 210 20% 98%;
+
+    --secondary: 210 40% 30%; /* A slightly lighter blue for secondary elements */
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 210 40% 25%; /* Muted background for hover/active states */
+    --muted-foreground: 215 20% 65%; /* Muted text */
+
+    --accent: 200 70% 50%; /* A brighter blue for icons/highlights */
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 215 20% 25%;
+    --input: 215 20% 25%;
+    --ring: 218 50% 20%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* No changes needed here as the root already defines the dark theme */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
